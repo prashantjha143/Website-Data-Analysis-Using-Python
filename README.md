@@ -15,6 +15,17 @@ channels?
 7) Is there any correlation between high traffic (sessions) and high engagement
 rate over time?
 
+```python
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+df = pd.read_csv("data.csv")
+
+df.head()
+```
+
 ### 1. Patterns or Trends in Website Sessions and Users Over Time
 
 
