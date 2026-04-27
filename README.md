@@ -15,6 +15,8 @@ channels?
 7) Is there any correlation between high traffic (sessions) and high engagement
 rate over time?
 
+## Step 1 - Importing Libraries and file
+
 ```python
 import numpy as np
 import pandas as pd
@@ -25,9 +27,32 @@ df = pd.read_csv("data.csv")
 
 df.head()
 ```
+## Step 2 - Data Cleaning and Preprocessing
+```python
+df.columns = df.iloc[0]
+df = df.drop(index = 0).reset_index(drop = True)
+df.columns = ["channel_group", "DateHour", "Users", "Sessions", "Engaged Session","Average engagement time per session"	,"Engaged sessions per user","Events per session","Engagement rate","Event count"]
 
+df.info()
+df["DateHour"] = pd.to_datetime(df["DateHour"], format="%Y%m%d%H", errors='coerce')
+numeric_cols = df.columns.drop(["channel_group", "DateHour"])
+df[numeric_cols] = df[numeric_cols].apply(pd.to_numeric, errors='coerce')
+df["Hour"] = df["DateHour"].dt.hour
+```
+## EDA
+```python
+df.describe()
+```
 ### 1. Patterns or Trends in Website Sessions and Users Over Time
-
+```python
+plt.figure(figsize=(10,5))
+df.groupby("DateHour")[["Sessions","Users"]].sum().plot(ax=plt.gca())
+plt.title("Sessions and users over time")
+plt.xlabel("DateHour")
+plt.ylabel("count")
+plt.show()
+```
+<img width="854" height="505" alt="image" src="https://github.com/user-attachments/assets/8c1b8d62-efb8-4e13-8cbb-51ef57383c41" />
 
 * Both sessions and users showed a consistent upward trend over time, indicating growing website traffic and awareness.
 
@@ -40,7 +65,14 @@ df.head()
 
 
 ### 2. Top Marketing Channel by User Acquisition
-
+```python
+plt.figure(figsize=(8, 5))
+sns.barplot(data=df, x="channel_group", y="Users", estimator=np.sum, palette="viridis")
+plt.title("Total Users by Channel")
+plt.xticks(rotation=45)
+plt.show()
+```
+<img width="716" height="544" alt="image" src="https://github.com/user-attachments/assets/3201a08e-9337-429c-93d8-48088683c78b" />
 
 * The Direct channel brought in the highest number of users overall, suggesting strong brand recall and return visitors.
 
@@ -61,7 +93,15 @@ df.head()
 
 
 ### 3. Channel with the Highest Average Engagement Time
+```python
 
+plt.figure(figsize=(8, 5))
+sns.barplot(data=df, x="channel_group",y = "Average engagement time per session",estimator=np.mean,palette='pastel') 
+plt.title("Avg Engagement Time by Channel")
+plt.xticks(rotation=45)
+plt.show()
+```
+<img width="699" height="544" alt="image" src="https://github.com/user-attachments/assets/854b7dbc-91bf-4452-9f09-b911210e2097" />
 
 * Direct channel also recorded the highest average engagement time per session.
 
@@ -82,7 +122,14 @@ df.head()
 
 
 ### 4. Variation of Engagement Rate Across Channels
-
+```python
+plt.figure(figsize=(8, 5))
+sns.boxplot(data=df, x="channel_group", y="Engagement rate", palette="pastel")
+plt.title("Engagement Rate Distribution by Channel")
+plt.xticks(rotation=45)
+plt.show()
+```
+<img width="695" height="544" alt="image" src="https://github.com/user-attachments/assets/247b8ece-c098-45d5-95b4-f5c14f7e0030" />
 
 * The Engagement Rate varied moderately among channels:
 
@@ -105,7 +152,32 @@ df.head()
 
 
 ### 5. Engaged vs. Non-Engaged Sessions by Channel
+```python
+# Group and prepare the session summary
+session_df = df.groupby("channel_group")[["Sessions", "Engaged Session"]].sum().reset_index()
 
+# Create Non-Engaged column
+session_df["Non-Engaged"] = session_df["Sessions"] - session_df["Engaged Session"]
+
+# Optional: clean column names
+session_df.columns = session_df.columns.str.strip().str.lower().str.replace(" ", "_")
+
+# Melt the dataframe
+session_df_melted = session_df.melt(
+    id_vars=["channel_group"],
+    value_vars=["engaged_session", "non-engaged"],
+    var_name="session_type",
+    value_name="count"
+)
+
+# Plot
+plt.figure(figsize=(8, 5))
+sns.barplot(data=session_df_melted, x="channel_group", y="count", hue="session_type", palette="Set2")
+plt.title("Engaged vs Non-Engaged Sessions")
+plt.xticks(rotation=45)
+plt.show()
+```
+<img width="716" height="544" alt="image" src="https://github.com/user-attachments/assets/00e21b1a-5c59-4759-b67c-7497b53cc270" />
 
 * Across channels, Engaged Sessions were notably higher in Direct and Organic Social sources.
 
@@ -125,11 +197,18 @@ df.head()
 * A/B test content types across channels.
 
 
-
-
-
 ### 6. Hourly Traffic Distribution by Channel
+```python
 
+heatmap_data = df.groupby(["Hour", "channel_group"])["Sessions"].sum().unstack().fillna(0)
+plt.figure(figsize=(12, 6))
+sns.heatmap(heatmap_data, cmap="YlGnBu", linewidths=.5, annot=True, fmt='.0f')
+plt.title("Traffic by Hour and Channel")
+plt.xlabel("Channel Group")
+plt.ylabel("Hour of Day")
+plt.show()
+```
+<img width="928" height="550" alt="image" src="https://github.com/user-attachments/assets/d5ff3e6f-627e-4cc3-9548-7c85779cc584" />
 
 The heatmap showed clear hourly peaks:
 
@@ -155,7 +234,18 @@ The heatmap showed clear hourly peaks:
 
 
 ### 7. Correlation Between High Traffic and Engagement Rate Over Time
-
+```python
+df_plot = df.groupby("DateHour")[["Engagement rate", "Sessions"]].mean().reset_index()
+plt.figure(figsize=(10, 5))
+plt.plot(df_plot["DateHour"], df_plot["Engagement rate"], label="Engagement rate")
+plt.plot(df_plot["DateHour"], df_plot["Sessions"], label="Sessions", color="blue")
+plt.title(" Engagement Rate vs Sessions Over Time")
+plt.xlabel("DateHour")
+plt.legend()
+plt.grid(True)
+plt.show()
+```
+<img width="863" height="473" alt="image" src="https://github.com/user-attachments/assets/efdedd1e-f7d4-472c-9c66-598dc0131ff3" />
 
 * The combined plot of Engagement Rate vs. Sessions over time indicates a mild positive correlation — as sessions increase, engagement rate also tends to rise slightly.
 
